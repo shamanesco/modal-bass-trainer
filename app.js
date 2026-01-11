@@ -61,15 +61,27 @@ class ModalBassTrainer {
       );
 
       // Request permission once to get device labels
+      let permissionGranted = false;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(track => track.stop()); // Stop immediately, just needed for permission
+        permissionGranted = true;
+        console.log('Audio permission granted, device labels will be visible');
+
+        // Small delay to let browser update device list after permission grant
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (permError) {
         console.log('Audio permission not granted yet, will request on Start');
       }
 
       // Get available audio input devices (will have real labels if permission granted)
       await this.populateInputDevices();
+
+      if (permissionGranted) {
+        console.log('Devices populated with real labels');
+      } else {
+        console.log('Devices populated with placeholder names (permission needed)');
+      }
 
       // Setup UI event listeners
       this.setupUIListeners();
@@ -89,9 +101,11 @@ class ModalBassTrainer {
   async populateInputDevices() {
     const devices = await this.pitchDetector.getAvailableDevices();
     const select = this.ui.inputDeviceSelect;
-    
+
+    console.log(`Found ${devices.length} audio input devices:`, devices);
+
     select.innerHTML = '';
-    
+
     if (devices.length === 0) {
       const option = document.createElement('option');
       option.textContent = 'No input devices found';
@@ -99,11 +113,22 @@ class ModalBassTrainer {
       select.appendChild(option);
       return;
     }
-    
-    devices.forEach(device => {
+
+    devices.forEach((device, index) => {
+      console.log(`Device ${index + 1} full info:`, {
+        deviceId: device.deviceId,
+        groupId: device.groupId,
+        kind: device.kind,
+        label: device.label
+      });
+
       const option = document.createElement('option');
       option.value = device.deviceId;
-      option.textContent = device.label || `Audio Input ${select.children.length + 1}`;
+      // Use device label if available (after permission), otherwise use placeholder
+      const label = device.label && device.label.trim() !== ''
+        ? device.label
+        : `Audio Input ${index + 1}`;
+      option.textContent = label;
       select.appendChild(option);
     });
   }
