@@ -49,32 +49,40 @@ class ModalBassTrainer {
       this.audioEngine = new ModalAudioEngine();
       await this.audioEngine.init();
       console.log('Audio engine initialized');
-      
+
       // Initialize fretboard visualizer
       this.fretboard = new FretboardVisualizer('fretboard-canvas');
       console.log('Fretboard visualizer initialized');
-      
+
       // Initialize pitch detector
       this.pitchDetector = new BassPitchDetector(
         (freq, conf, noteName, midiNote, cents) => this.onPitchDetected(freq, conf, noteName, midiNote, cents),
         (level) => this.onLevelUpdate(level)
       );
-      
-      // Get available audio input devices
+
+      // Request permission once to get device labels
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately, just needed for permission
+      } catch (permError) {
+        console.log('Audio permission not granted yet, will request on Start');
+      }
+
+      // Get available audio input devices (will have real labels if permission granted)
       await this.populateInputDevices();
-      
+
       // Setup UI event listeners
       this.setupUIListeners();
-      
+
       // Set initial mode
       this.updateMode();
-      
+
       // Show ready state
-      this.showStatus('Ready. Select your audio input and click Start.');
-      
+      this.showStatus('Ready. Select your line input device and click Start.');
+
     } catch (error) {
       console.error('Initialization error:', error);
-      this.showError('Failed to initialize. Please check your audio permissions.');
+      this.showError('Failed to initialize. Please check your audio input permissions.');
     }
   }
 
@@ -139,6 +147,12 @@ class ModalBassTrainer {
     
     // Input device change
     this.ui.inputDeviceSelect.addEventListener('change', async () => {
+      // Cleanup existing stream if any
+      if (this.pitchDetector.mediaStream) {
+        this.pitchDetector.cleanup();
+      }
+
+      // If currently running, reinitialize with new device
       if (this.pitchDetector.isRunning) {
         await this.reinitializePitchDetector();
       }
@@ -188,15 +202,17 @@ class ModalBassTrainer {
 
   async start() {
     try {
-      // Initialize pitch detector with selected device
-      const deviceId = this.ui.inputDeviceSelect.value;
-      const success = await this.pitchDetector.init(deviceId);
-      
-      if (!success) {
-        this.showError('Failed to access audio input. Check permissions and connection.');
-        return;
+      // Initialize pitch detector with selected device (only if not already initialized)
+      if (!this.pitchDetector.mediaStream) {
+        const deviceId = this.ui.inputDeviceSelect.value;
+        const success = await this.pitchDetector.init(deviceId);
+
+        if (!success) {
+          this.showError('Failed to access line input. Check permissions and device connection.');
+          return;
+        }
       }
-      
+
       // Start pitch detection
       this.pitchDetector.start();
       

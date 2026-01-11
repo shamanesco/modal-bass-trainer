@@ -33,8 +33,8 @@ class ModalAudioEngine {
     
     // Root oscillator - warm sine wave
     const rootOsc = this.createOscillator(rootFreq, 'sine', 0.4);
-    
-    if (includefifth) {
+
+    if (includeFifth) {
       // Fifth oscillator - softer
       const fifthOsc = this.createOscillator(fifthFreq, 'sine', 0.2);
     }

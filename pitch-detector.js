@@ -1,4 +1,4 @@
-// pitch-detector.js - Real-time bass pitch detection via line input
+// pitch-detector.js - Real-time bass pitch detection from line input
 
 class BassPitchDetector {
   constructor(onPitchDetected, onLevelUpdate) {
@@ -28,12 +28,13 @@ class BassPitchDetector {
 
   async init(deviceId = null) {
     try {
-      // Request audio input
+      // Request line input access
       const constraints = {
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
+          channelCount: 1,  // Capture only channel 1 (mono)
           deviceId: deviceId ? { exact: deviceId } : undefined
         }
       };
@@ -57,7 +58,7 @@ class BassPitchDetector {
       
       return true;
     } catch (error) {
-      console.error('Failed to initialize audio input:', error);
+      console.error('Failed to initialize line input:', error);
       return false;
     }
   }
@@ -273,9 +274,9 @@ const detector = new BassPitchDetector(
   }
 );
 
-// Get available audio inputs
+// Get available line input devices
 const devices = await detector.getAvailableDevices();
-console.log('Available inputs:', devices);
+console.log('Available line inputs:', devices);
 
 // Initialize with specific device (or null for default)
 const success = await detector.init(devices[0]?.deviceId);
