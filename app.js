@@ -203,25 +203,43 @@ class ModalBassTrainer {
   updateGrooveOptions() {
     const select = this.ui.grooveSelect;
     const grooveContainer = select.parentElement;
-    
+    const tempoSlider = this.ui.tempoSlider;
+    const tempoContainer = tempoSlider.parentElement;
+
     if (this.practiceType === 'drone') {
-      grooveContainer.style.display = 'none';
+      // Hide groove selector
+      grooveContainer.style.visibility = 'hidden';
+      grooveContainer.style.position = 'absolute';
+      grooveContainer.style.pointerEvents = 'none';
+
+      // Hide tempo slider
+      tempoContainer.style.visibility = 'hidden';
+      tempoContainer.style.position = 'absolute';
+      tempoContainer.style.pointerEvents = 'none';
       return;
     }
-    
-    grooveContainer.style.display = 'block';
-    
+
+    // Show groove selector
+    grooveContainer.style.visibility = 'visible';
+    grooveContainer.style.position = 'relative';
+    grooveContainer.style.pointerEvents = 'auto';
+
+    // Show tempo slider
+    tempoContainer.style.visibility = 'visible';
+    tempoContainer.style.position = 'relative';
+    tempoContainer.style.pointerEvents = 'auto';
+
     // Populate grooves for current mode
     const mode = getMode(this.currentMode);
     select.innerHTML = '';
-    
+
     mode.grooves.forEach(groove => {
       const option = document.createElement('option');
       option.value = groove.id;
       option.textContent = `${groove.name} - ${groove.description}`;
       select.appendChild(option);
     });
-    
+
     this.currentGroove = mode.grooves[0].id;
   }
 
