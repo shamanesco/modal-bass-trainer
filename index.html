@@ -10,10 +10,22 @@
   <div class="container">
     <header>
       <h1>Modal Bass Trainer</h1>
-      <p class="subtitle">Practice modal playing with real-time visual feedback</p>
+      <p class="subtitle">Practice modal playing with line input and real-time visual feedback</p>
     </header>
 
     <div class="control-panel">
+      <div class="control-group">
+        <label for="input-device-select">Line Input Device:</label>
+        <select id="input-device-select"></select>
+      </div>
+
+      <div class="control-group">
+        <label>Signal Level:</label>
+        <div class="meter-container">
+          <div id="input-meter" class="input-meter"></div>
+        </div>
+      </div>
+
       <div class="control-group">
         <label for="mode-select">Mode:</label>
         <select id="mode-select">
@@ -64,18 +76,6 @@
       <div class="control-group">
         <label for="tempo-slider">Tempo: <span id="tempo-display">90</span> BPM</label>
         <input type="range" id="tempo-slider" min="60" max="140" value="90">
-      </div>
-
-      <div class="control-group">
-        <label for="input-device-select">Audio Input:</label>
-        <select id="input-device-select"></select>
-      </div>
-
-      <div class="control-group">
-        <label>Input Level:</label>
-        <div class="meter-container">
-          <div id="input-meter" class="input-meter"></div>
-        </div>
       </div>
 
       <div class="button-group">

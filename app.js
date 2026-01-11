@@ -49,41 +49,63 @@ class ModalBassTrainer {
       this.audioEngine = new ModalAudioEngine();
       await this.audioEngine.init();
       console.log('Audio engine initialized');
-      
+
       // Initialize fretboard visualizer
       this.fretboard = new FretboardVisualizer('fretboard-canvas');
       console.log('Fretboard visualizer initialized');
-      
+
       // Initialize pitch detector
       this.pitchDetector = new BassPitchDetector(
         (freq, conf, noteName, midiNote, cents) => this.onPitchDetected(freq, conf, noteName, midiNote, cents),
         (level) => this.onLevelUpdate(level)
       );
-      
-      // Get available audio input devices
+
+      // Request permission once to get device labels
+      let permissionGranted = false;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately, just needed for permission
+        permissionGranted = true;
+        console.log('Audio permission granted, device labels will be visible');
+
+        // Small delay to let browser update device list after permission grant
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (permError) {
+        console.log('Audio permission not granted yet, will request on Start');
+      }
+
+      // Get available audio input devices (will have real labels if permission granted)
       await this.populateInputDevices();
-      
+
+      if (permissionGranted) {
+        console.log('Devices populated with real labels');
+      } else {
+        console.log('Devices populated with placeholder names (permission needed)');
+      }
+
       // Setup UI event listeners
       this.setupUIListeners();
-      
+
       // Set initial mode
       this.updateMode();
-      
+
       // Show ready state
-      this.showStatus('Ready. Select your audio input and click Start.');
-      
+      this.showStatus('Ready. Select your line input device and click Start.');
+
     } catch (error) {
       console.error('Initialization error:', error);
-      this.showError('Failed to initialize. Please check your audio permissions.');
+      this.showError('Failed to initialize. Please check your audio input permissions.');
     }
   }
 
   async populateInputDevices() {
     const devices = await this.pitchDetector.getAvailableDevices();
     const select = this.ui.inputDeviceSelect;
-    
+
+    console.log(`Found ${devices.length} audio input devices:`, devices);
+
     select.innerHTML = '';
-    
+
     if (devices.length === 0) {
       const option = document.createElement('option');
       option.textContent = 'No input devices found';
@@ -91,11 +113,22 @@ class ModalBassTrainer {
       select.appendChild(option);
       return;
     }
-    
-    devices.forEach(device => {
+
+    devices.forEach((device, index) => {
+      console.log(`Device ${index + 1} full info:`, {
+        deviceId: device.deviceId,
+        groupId: device.groupId,
+        kind: device.kind,
+        label: device.label
+      });
+
       const option = document.createElement('option');
       option.value = device.deviceId;
-      option.textContent = device.label || `Audio Input ${select.children.length + 1}`;
+      // Use device label if available (after permission), otherwise use placeholder
+      const label = device.label && device.label.trim() !== ''
+        ? device.label
+        : `Audio Input ${index + 1}`;
+      option.textContent = label;
       select.appendChild(option);
     });
   }
@@ -139,6 +172,12 @@ class ModalBassTrainer {
     
     // Input device change
     this.ui.inputDeviceSelect.addEventListener('change', async () => {
+      // Cleanup existing stream if any
+      if (this.pitchDetector.mediaStream) {
+        this.pitchDetector.cleanup();
+      }
+
+      // If currently running, reinitialize with new device
       if (this.pitchDetector.isRunning) {
         await this.reinitializePitchDetector();
       }
@@ -164,39 +203,59 @@ class ModalBassTrainer {
   updateGrooveOptions() {
     const select = this.ui.grooveSelect;
     const grooveContainer = select.parentElement;
-    
+    const tempoSlider = this.ui.tempoSlider;
+    const tempoContainer = tempoSlider.parentElement;
+
     if (this.practiceType === 'drone') {
-      grooveContainer.style.display = 'none';
+      // Hide groove selector
+      grooveContainer.style.visibility = 'hidden';
+      grooveContainer.style.position = 'absolute';
+      grooveContainer.style.pointerEvents = 'none';
+
+      // Hide tempo slider
+      tempoContainer.style.visibility = 'hidden';
+      tempoContainer.style.position = 'absolute';
+      tempoContainer.style.pointerEvents = 'none';
       return;
     }
-    
-    grooveContainer.style.display = 'block';
-    
+
+    // Show groove selector
+    grooveContainer.style.visibility = 'visible';
+    grooveContainer.style.position = 'relative';
+    grooveContainer.style.pointerEvents = 'auto';
+
+    // Show tempo slider
+    tempoContainer.style.visibility = 'visible';
+    tempoContainer.style.position = 'relative';
+    tempoContainer.style.pointerEvents = 'auto';
+
     // Populate grooves for current mode
     const mode = getMode(this.currentMode);
     select.innerHTML = '';
-    
+
     mode.grooves.forEach(groove => {
       const option = document.createElement('option');
       option.value = groove.id;
       option.textContent = `${groove.name} - ${groove.description}`;
       select.appendChild(option);
     });
-    
+
     this.currentGroove = mode.grooves[0].id;
   }
 
   async start() {
     try {
-      // Initialize pitch detector with selected device
-      const deviceId = this.ui.inputDeviceSelect.value;
-      const success = await this.pitchDetector.init(deviceId);
-      
-      if (!success) {
-        this.showError('Failed to access audio input. Check permissions and connection.');
-        return;
+      // Initialize pitch detector with selected device (only if not already initialized)
+      if (!this.pitchDetector.mediaStream) {
+        const deviceId = this.ui.inputDeviceSelect.value;
+        const success = await this.pitchDetector.init(deviceId);
+
+        if (!success) {
+          this.showError('Failed to access line input. Check permissions and device connection.');
+          return;
+        }
       }
-      
+
       // Start pitch detection
       this.pitchDetector.start();
       
