@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modal Bass Trainer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Modal Bass Trainer</h1>
+      <p class="subtitle">Practice modal playing with real-time visual feedback</p>
+    </header>
+
+    <div class="control-panel">
+      <div class="control-group">
+        <label for="mode-select">Mode:</label>
+        <select id="mode-select">
+          <option value="dorian">Dorian</option>
+          <option value="phrygian">Phrygian</option>
+          <option value="lydian">Lydian</option>
+          <option value="mixolydian">Mixolydian</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="root-select">Root:</label>
+        <select id="root-select">
+          <option value="C">C</option>
+          <option value="C#">C#</option>
+          <option value="D" selected>D</option>
+          <option value="D#">D#</option>
+          <option value="E">E</option>
+          <option value="F">F</option>
+          <option value="F#">F#</option>
+          <option value="G">G</option>
+          <option value="G#">G#</option>
+          <option value="A">A</option>
+          <option value="A#">A#</option>
+          <option value="B">B</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Practice Type:</label>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="practice-type" value="drone" checked>
+            Drone
+          </label>
+          <label>
+            <input type="radio" name="practice-type" value="groove">
+            Groove
+          </label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="groove-select">Groove:</label>
+        <select id="groove-select"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="tempo-slider">Tempo: <span id="tempo-display">90</span> BPM</label>
+        <input type="range" id="tempo-slider" min="60" max="140" value="90">
+      </div>
+
+      <div class="control-group">
+        <label for="input-device-select">Audio Input:</label>
+        <select id="input-device-select"></select>
+      </div>
+
+      <div class="control-group">
+        <label>Input Level:</label>
+        <div class="meter-container">
+          <div id="input-meter" class="input-meter"></div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button id="start-button" class="btn btn-primary">Start</button>
+        <button id="stop-button" class="btn btn-secondary" disabled>Stop</button>
+      </div>
+
+      <div id="status-message" class="status-message"></div>
+    </div>
+
+    <div id="mode-info-panel" class="info-panel"></div>
+
+    <div class="visualizer-container">
+      <canvas id="fretboard-canvas"></canvas>
+    </div>
+
+    <div id="stats-panel" class="stats-panel"></div>
+  </div>
+
+  <script src="modal-data.js"></script>
+  <script src="audio.js"></script>
+  <script src="pitch-detector.js"></script>
+  <script src="fretboard.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
