@@ -1,6 +1,6 @@
 // app.js - Main application controller
 
-import { MODAL_DATA } from './modal-data.js';
+import { MODAL_DATA, getMode, getGroove, transposeToRoot } from './modal-data.js';
 import { ModalAudioEngine } from './audio.js';
 import { FretboardVisualizer } from './fretboard.js';
 import { BassPitchDetector } from './pitch-detector.js';

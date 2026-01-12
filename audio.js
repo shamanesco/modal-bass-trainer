@@ -1,5 +1,7 @@
 // audio.js - Drone and groove generation
 
+import { getGroove } from './modal-data.js';
+
 export class ModalAudioEngine {
   constructor() {
     this.audioContext = null;

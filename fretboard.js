@@ -1,5 +1,7 @@
 // fretboard.js - Visual feedback for bass fretboard and modal heat map
 
+import { getMode } from './modal-data.js';
+
 export class FretboardVisualizer {
   constructor(canvasId, options = {}) {
     this.canvas = document.getElementById(canvasId);

@@ -280,18 +280,18 @@ export const MODAL_DATA = {
 };
 
 // Helper function to get mode data
-function getMode(modeName) {
+export function getMode(modeName) {
   return MODAL_DATA.modes[modeName];
 }
 
 // Helper function to get groove preset
-function getGroove(modeName, grooveId) {
+export function getGroove(modeName, grooveId) {
   const mode = MODAL_DATA.modes[modeName];
   return mode.grooves.find(g => g.id === grooveId);
 }
 
 // Helper to transpose intervals to specific root
-function transposeToRoot(mode, rootNote) {
+export function transposeToRoot(mode, rootNote) {
   // rootNote is 0-11 (C=0, C#=1, etc.)
   return mode.intervals.map(interval => ({
     ...interval,
