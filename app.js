@@ -24,6 +24,14 @@ class ModalBassTrainer {
       characteristicToneCount: 0,
       avoidToneCount: 0
     };
+
+    // Track last counted MIDI note to prevent counting sustained notes multiple times
+    this.lastCountedMIDI = null;
+    this.lastNoteTime = null;
+    this.lastDetectionTime = null;
+
+    // Debug logging
+    this.debugLog = [];
     
     // UI elements
     this.ui = {
@@ -271,6 +279,10 @@ class ModalBassTrainer {
       this.isPlaying = true;
       this.session.startTime = Date.now();
       this.resetSessionStats();
+      this.lastCountedMIDI = null; // Reset note tracking for new session
+      this.lastNoteTime = null;
+      this.lastDetectionTime = Date.now();
+      this.debugLog = []; // Clear debug log
       
       // Update UI
       this.ui.startButton.disabled = true;
@@ -288,22 +300,51 @@ class ModalBassTrainer {
   stop() {
     // Stop audio
     this.audioEngine.stopAll();
-    
+
     // Stop pitch detection
     this.pitchDetector.stop();
-    
+
+    // Print debug log summary
+    this.printDebugSummary();
+
     // Update state
     this.isPlaying = false;
-    
+    this.lastCountedMIDI = null; // Reset note tracking
+    this.lastNoteTime = null;
+    this.lastDetectionTime = null;
+
     // Update UI
     this.ui.startButton.disabled = false;
     this.ui.stopButton.disabled = true;
     this.disableControls(false);
-    
+
     // Show session summary
     this.showSessionSummary();
-    
+
     this.showStatus('Stopped. Review your session stats below.');
+  }
+
+  printDebugSummary() {
+    console.log('\n========== SESSION DEBUG SUMMARY ==========');
+    console.log(`Total detections: ${this.debugLog.length}`);
+    console.log(`Total notes counted: ${this.session.totalNotes}`);
+    console.log(`\nDetections that were COUNTED:`);
+
+    const countedNotes = this.debugLog.filter(entry => entry.counted);
+    countedNotes.forEach((entry, idx) => {
+      console.log(`  ${idx + 1}. ${entry.note} (MIDI ${entry.midi}) at ${entry.time}ms - gap: ${entry.timeSinceLast}ms`);
+    });
+
+    console.log(`\nAll detections (showing first 50):`);
+    this.debugLog.slice(0, 50).forEach((entry, idx) => {
+      const counted = entry.counted ? '✓ COUNTED' : '';
+      console.log(`  ${idx + 1}. ${entry.note.padEnd(4)} PC:${entry.pitchClass.toString().padStart(2)} t:${entry.time}ms gap:${entry.timeSinceLast.toString().padStart(4)} pcChg:${entry.pitchChanged} ${counted}`);
+    });
+
+    if (this.debugLog.length > 50) {
+      console.log(`  ... and ${this.debugLog.length - 50} more detections`);
+    }
+    console.log('==========================================\n');
   }
 
   async reinitializePitchDetector() {
@@ -320,12 +361,42 @@ class ModalBassTrainer {
   }
 
   onPitchDetected(frequency, confidence, noteName, midiNote, cents) {
-    // Update fretboard visualization
+    // Update fretboard visualization (always update for real-time feedback)
     this.fretboard.updatePosition(midiNote);
-    
-    // Track analytics
-    this.trackNote(midiNote);
-    
+
+    const now = Date.now();
+
+    // Hybrid approach: 600ms gate + pitch class change
+    // This prevents both transient miscounts AND sustained note re-counts
+    const timeSinceLastNote = this.lastNoteTime ? (now - this.lastNoteTime) : Infinity;
+    const pitchClass = midiNote % 12;
+    const lastPitchClass = this.lastCountedMIDI !== null ? this.lastCountedMIDI % 12 : null;
+    const pitchClassChanged = lastPitchClass === null || pitchClass !== lastPitchClass;
+
+    // Count if: 600ms passed AND pitch class changed
+    const shouldCount = timeSinceLastNote >= 600 && pitchClassChanged;
+
+    // Log detection
+    const logEntry = {
+      time: now - this.session.startTime,
+      note: noteName,
+      midi: midiNote,
+      pitchClass: pitchClass,
+      timeSinceLast: timeSinceLastNote === Infinity ? 'N/A' : Math.round(timeSinceLastNote),
+      pitchChanged: pitchClassChanged,
+      counted: shouldCount
+    };
+    this.debugLog.push(logEntry);
+
+    if (shouldCount) {
+      this.trackNote(midiNote);
+      this.lastCountedMIDI = midiNote;
+      this.lastNoteTime = now;
+    }
+
+    // Update last detection time
+    this.lastDetectionTime = now;
+
     // Update real-time stats display
     this.updateStatsDisplay();
   }

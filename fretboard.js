@@ -384,17 +384,17 @@ class FretboardVisualizer {
       
       // Fade based on age
       const age = currentTime - timestamp;
-      const opacity = Math.max(0, 1 - (age / this.trailFadeTime));
-      
+      const opacity = Math.max(0, Math.min(1, 1 - (age / this.trailFadeTime)));
+
       // Color based on modal function
       const interval = this.modalIntervals.find(int => int.semitones === intervalFromRoot);
       const color = interval ? MODAL_DATA.colors[interval.color] : MODAL_DATA.colors.neutral;
-      
+
       ctx.fillStyle = color + Math.floor(opacity * 128).toString(16).padStart(2, '0');
       ctx.strokeStyle = '#fff' + Math.floor(opacity * 64).toString(16).padStart(2, '0');
       ctx.lineWidth = 2;
-      
-      const radius = 10 + (1 - opacity) * 5; // Shrink as it fades
+
+      const radius = Math.max(5, 10 + (1 - opacity) * 5); // Shrink as it fades, minimum 5px
       
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -408,15 +408,15 @@ class FretboardVisualizer {
   drawCurrentPosition() {
     const { ctx } = this;
     const { margin, stringSpacing, fretSpacing, nutWidth, startFret } = this.config;
-    const { position, midiNote, timestamp } = this.currentPosition;
-    
-    if (position.fret < startFret || position.fret > startFret + this.config.displayFrets) {
+    const { fret, stringIndex, midiNote, timestamp } = this.currentPosition;
+
+    if (fret < startFret || fret > startFret + this.config.displayFrets) {
       return;
     }
-    
-    const fretIndex = position.fret - startFret;
+
+    const fretIndex = fret - startFret;
     const x = margin.left + nutWidth + (fretIndex - 0.5) * fretSpacing;
-    const y = margin.top + position.stringIndex * stringSpacing;
+    const y = margin.top + stringIndex * stringSpacing;
     
     // Determine color based on modal function
     const intervalFromRoot = (midiNote - this.currentRoot + 12) % 12;
