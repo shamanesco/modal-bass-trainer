@@ -1,24 +1,29 @@
 // pitch-detector.js - Real-time bass pitch detection from line input
 
-class BassPitchDetector {
+import { PitchDetector } from 'https://esm.sh/pitchy@4';
+
+export class BassPitchDetector {
   constructor(onPitchDetected, onLevelUpdate) {
     this.audioContext = null;
     this.analyser = null;
     this.mediaStream = null;
     this.rafID = null;
-    
+
     // Callbacks
     this.onPitchDetected = onPitchDetected; // (frequency, confidence, noteName, midiNote)
     this.onLevelUpdate = onLevelUpdate;     // (level) for input meter
-    
-    // Detection parameters
-    this.bufferSize = 4096;  // Larger FFT for low frequencies
+
+    // Detection parameters optimized for 4-string bass (E1-G3: 41.2-196 Hz)
+    this.bufferSize = 4096;  // Good for bass frequencies (~93ms resolution at 44.1kHz)
     this.sampleRate = 44100;
-    this.minFrequency = 30;   // Below low E (41.2 Hz)
-    this.maxFrequency = 400;  // Above typical bass range
+    this.minFrequency = 38;   // Just below E1 (41.2 Hz) with margin
+    this.maxFrequency = 260;  // Just above B3 (246.94 Hz on 24th fret)
     this.threshold = -50;     // dB threshold for detection
-    this.confidenceThreshold = 0.85;
-    
+    this.confidenceThreshold = 0.75;  // Lower for Pitchy's stricter clarity metric
+
+    // Pitchy detector (initialized after we know sample rate)
+    this.pitchyDetector = null;
+
     // State
     this.isRunning = false;
     this.lastDetectedNote = null;
@@ -55,7 +60,10 @@ class BassPitchDetector {
       this.analyser.maxDecibels = -10;
       
       source.connect(this.analyser);
-      
+
+      // Initialize Pitchy detector optimized for bass frequencies
+      this.pitchyDetector = PitchDetector.forFloat32Array(this.bufferSize);
+
       return true;
     } catch (error) {
       console.error('Failed to initialize line input:', error);
@@ -96,24 +104,30 @@ class BassPitchDetector {
     
     // Only detect if signal is strong enough
     if (level > this.threshold) {
-      const result = this.autoCorrelate(buffer);
-      
-      if (result.frequency > 0 && result.confidence > this.confidenceThreshold) {
+      // Use Pitchy to detect pitch (McLeod Pitch Method)
+      const [frequency, clarity] = this.pitchyDetector.findPitch(buffer, this.sampleRate);
+
+      // Validate frequency is in bass range and clarity meets threshold
+      if (frequency > 0 &&
+          frequency >= this.minFrequency &&
+          frequency <= this.maxFrequency &&
+          clarity > this.confidenceThreshold) {
+
         // Cooldown to prevent rapid-fire detections
         const now = Date.now();
         if (now - this.lastDetectionTime > this.detectionCooldown) {
-          const noteInfo = this.frequencyToNote(result.frequency);
-          
+          const noteInfo = this.frequencyToNote(frequency);
+
           if (this.onPitchDetected) {
             this.onPitchDetected(
-              result.frequency,
-              result.confidence,
+              frequency,
+              clarity,
               noteInfo.name,
               noteInfo.midi,
               noteInfo.cents
             );
           }
-          
+
           this.lastDetectedNote = noteInfo;
           this.lastDetectionTime = now;
         }
@@ -121,92 +135,6 @@ class BassPitchDetector {
     }
     
     this.rafID = requestAnimationFrame(() => this.detectPitch());
-  }
-
-  // Autocorrelation algorithm - best for bass frequencies
-  autoCorrelate(buffer) {
-    const size = buffer.length;
-    const maxSamples = Math.floor(size / 2);
-    let bestOffset = -1;
-    let bestCorrelation = 0;
-    let foundGoodCorrelation = false;
-    
-    // Calculate RMS for normalization
-    const rms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / size);
-    
-    if (rms < 0.01) {
-      return { frequency: -1, confidence: 0 };
-    }
-    
-    // Limit search range based on expected frequency
-    const minOffset = Math.floor(this.sampleRate / this.maxFrequency);
-    const maxOffset = Math.floor(this.sampleRate / this.minFrequency);
-    
-    // Find the best correlation
-    for (let offset = minOffset; offset < maxOffset && offset < maxSamples; offset++) {
-      let correlation = 0;
-      
-      for (let i = 0; i < maxSamples; i++) {
-        correlation += Math.abs(buffer[i] - buffer[i + offset]);
-      }
-      
-      correlation = 1 - (correlation / maxSamples);
-      
-      if (correlation > 0.9) {
-        foundGoodCorrelation = true;
-        if (correlation > bestCorrelation) {
-          bestCorrelation = correlation;
-          bestOffset = offset;
-        }
-      } else if (foundGoodCorrelation) {
-        // Found peak, start declining
-        break;
-      }
-    }
-    
-    if (bestCorrelation > 0.01 && bestOffset !== -1) {
-      // Refine with parabolic interpolation
-      const refinedOffset = this.parabolicInterpolation(
-        buffer, 
-        bestOffset,
-        maxSamples
-      );
-      
-      const frequency = this.sampleRate / refinedOffset;
-      
-      // Validate frequency is in expected range
-      if (frequency >= this.minFrequency && frequency <= this.maxFrequency) {
-        return {
-          frequency: frequency,
-          confidence: bestCorrelation
-        };
-      }
-    }
-    
-    return { frequency: -1, confidence: 0 };
-  }
-
-  parabolicInterpolation(buffer, offset, maxSamples) {
-    // Improve accuracy using neighboring correlations
-    if (offset < 1 || offset >= maxSamples - 1) {
-      return offset;
-    }
-    
-    const prev = this.correlationAtOffset(buffer, offset - 1, maxSamples);
-    const curr = this.correlationAtOffset(buffer, offset, maxSamples);
-    const next = this.correlationAtOffset(buffer, offset + 1, maxSamples);
-    
-    const delta = (prev - next) / (2 * (prev - 2 * curr + next));
-    
-    return offset + delta;
-  }
-
-  correlationAtOffset(buffer, offset, maxSamples) {
-    let correlation = 0;
-    for (let i = 0; i < maxSamples; i++) {
-      correlation += Math.abs(buffer[i] - buffer[i + offset]);
-    }
-    return 1 - (correlation / maxSamples);
   }
 
   calculateRMS(buffer) {

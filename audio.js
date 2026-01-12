@@ -1,6 +1,6 @@
 // audio.js - Drone and groove generation
 
-class ModalAudioEngine {
+export class ModalAudioEngine {
   constructor() {
     this.audioContext = null;
     this.masterGain = null;

@@ -1,4 +1,4 @@
-const MODAL_DATA = {
+export const MODAL_DATA = {
   
   // Mode definitions
   modes: {
