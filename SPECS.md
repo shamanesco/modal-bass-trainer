@@ -437,14 +437,7 @@ The Modal Bass Trainer is a web-based application designed to help bass guitaris
 
 ## 8. Known Issues
 
-### 8.1 Bug: Drone Fifth Not Playing
-**Issue**: In `audio.js:37`, variable `includefifth` (typo) should be `includeFifth`
-
-**Impact**: Fifth oscillator never plays in drone mode
-
-**Location**: `audio.js:37`
-
-**Fix**: Change `if (includefifth)` to `if (includeFifth)`
+No known issues at this time.
 
 ---
 
