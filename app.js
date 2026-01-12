@@ -371,15 +371,15 @@ class ModalBassTrainer {
 
     const now = Date.now();
 
-    // Hybrid approach: 600ms gate + pitch class change
-    // This prevents both transient miscounts AND sustained note re-counts
+    // Hybrid approach: 400ms gate + pitch class change
+    // With Pitchy's improved stability, reduced from 600ms to 400ms
     const timeSinceLastNote = this.lastNoteTime ? (now - this.lastNoteTime) : Infinity;
     const pitchClass = midiNote % 12;
     const lastPitchClass = this.lastCountedMIDI !== null ? this.lastCountedMIDI % 12 : null;
     const pitchClassChanged = lastPitchClass === null || pitchClass !== lastPitchClass;
 
-    // Count if: 600ms passed AND pitch class changed
-    const shouldCount = timeSinceLastNote >= 600 && pitchClassChanged;
+    // Count if: 400ms passed AND pitch class changed
+    const shouldCount = timeSinceLastNote >= 400 && pitchClassChanged;
 
     // Log detection
     const logEntry = {
