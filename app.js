@@ -371,15 +371,15 @@ class ModalBassTrainer {
 
     const now = Date.now();
 
-    // Hybrid approach: 400ms gate + pitch class change
-    // With Pitchy's improved stability, reduced from 600ms to 400ms
+    // Hybrid approach: 300ms gate + pitch class change
+    // With Pitchy's improved stability, reduced to 300ms for faster note sequences
     const timeSinceLastNote = this.lastNoteTime ? (now - this.lastNoteTime) : Infinity;
     const pitchClass = midiNote % 12;
     const lastPitchClass = this.lastCountedMIDI !== null ? this.lastCountedMIDI % 12 : null;
     const pitchClassChanged = lastPitchClass === null || pitchClass !== lastPitchClass;
 
-    // Count if: 400ms passed AND pitch class changed
-    const shouldCount = timeSinceLastNote >= 400 && pitchClassChanged;
+    // Count if: 300ms passed AND pitch class changed
+    const shouldCount = timeSinceLastNote >= 300 && pitchClassChanged;
 
     // Log detection
     const logEntry = {
