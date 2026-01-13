@@ -1,6 +1,7 @@
 // app.js - Main application controller
 
 import { MODAL_DATA, getMode, getGroove, transposeToRoot } from './modal-data.js';
+import { getNoteCountingConfig } from './config.js';
 import { ModalAudioEngine } from './audio.js';
 import { FretboardVisualizer } from './fretboard.js';
 import { BassPitchDetector } from './pitch-detector.js';
@@ -34,6 +35,11 @@ class ModalBassTrainer {
     this.lastCountedMIDI = null;
     this.lastNoteTime = null;
     this.lastDetectionTime = null;
+
+    // Load note counting configuration
+    const noteConfig = getNoteCountingConfig();
+    this.timeGateMs = noteConfig.timeGateMs;
+    this.enablePitchClassMatching = noteConfig.enablePitchClassMatching;
 
     // Debug logging
     this.debugLog = [];
@@ -371,15 +377,19 @@ class ModalBassTrainer {
 
     const now = Date.now();
 
-    // Hybrid approach: 300ms gate + pitch class change
-    // With Pitchy's improved stability, reduced to 300ms for faster note sequences
+    // Hybrid approach: configurable time gate + pitch class change
+    // With Pitchy's improved stability, can use faster note sequences
     const timeSinceLastNote = this.lastNoteTime ? (now - this.lastNoteTime) : Infinity;
     const pitchClass = midiNote % 12;
     const lastPitchClass = this.lastCountedMIDI !== null ? this.lastCountedMIDI % 12 : null;
-    const pitchClassChanged = lastPitchClass === null || pitchClass !== lastPitchClass;
 
-    // Count if: 300ms passed AND pitch class changed
-    const shouldCount = timeSinceLastNote >= 300 && pitchClassChanged;
+    // Use configuration for pitch class matching
+    const pitchClassChanged = this.enablePitchClassMatching
+      ? (lastPitchClass === null || pitchClass !== lastPitchClass)
+      : true;
+
+    // Count if: configured time gate passed AND pitch class changed (if enabled)
+    const shouldCount = timeSinceLastNote >= this.timeGateMs && pitchClassChanged;
 
     // Log detection
     const logEntry = {

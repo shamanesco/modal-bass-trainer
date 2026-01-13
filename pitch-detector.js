@@ -1,6 +1,7 @@
 // pitch-detector.js - Real-time bass pitch detection from line input
 
 import { PitchDetector } from 'https://esm.sh/pitchy@4';
+import { getPitchDetectionConfig } from './config.js';
 
 export class BassPitchDetector {
   constructor(onPitchDetected, onLevelUpdate) {
@@ -13,13 +14,16 @@ export class BassPitchDetector {
     this.onPitchDetected = onPitchDetected; // (frequency, confidence, noteName, midiNote)
     this.onLevelUpdate = onLevelUpdate;     // (level) for input meter
 
+    // Load configuration
+    const config = getPitchDetectionConfig();
+
     // Detection parameters optimized for 4-string bass (E1-G3: 41.2-196 Hz)
-    this.bufferSize = 4096;  // Good for bass frequencies (~93ms resolution at 44.1kHz)
-    this.sampleRate = 44100;
-    this.minFrequency = 38;   // Just below E1 (41.2 Hz) with margin
-    this.maxFrequency = 260;  // Just above B3 (246.94 Hz on 24th fret)
-    this.threshold = -50;     // dB threshold for detection
-    this.confidenceThreshold = 0.75;  // Lower for Pitchy's stricter clarity metric
+    this.bufferSize = config.bufferSize;
+    this.sampleRate = 44100;  // Overridden by AudioContext actual sample rate
+    this.minFrequency = config.minFrequency;
+    this.maxFrequency = config.maxFrequency;
+    this.threshold = config.threshold;
+    this.confidenceThreshold = config.confidenceThreshold;
 
     // Pitchy detector (initialized after we know sample rate)
     this.pitchyDetector = null;
@@ -28,7 +32,7 @@ export class BassPitchDetector {
     this.isRunning = false;
     this.lastDetectedNote = null;
     this.lastDetectionTime = 0;
-    this.detectionCooldown = 50; // ms between detections
+    this.detectionCooldown = config.detectionCooldown;
   }
 
   async init(deviceId = null) {
@@ -52,13 +56,14 @@ export class BassPitchDetector {
       
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       
-      // Create analyser
+      // Create analyser with configuration
+      const config = getPitchDetectionConfig();
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = this.bufferSize;
-      this.analyser.smoothingTimeConstant = 0.3;
-      this.analyser.minDecibels = -70;
-      this.analyser.maxDecibels = -10;
-      
+      this.analyser.smoothingTimeConstant = config.analyser.smoothingTimeConstant;
+      this.analyser.minDecibels = config.analyser.minDecibels;
+      this.analyser.maxDecibels = config.analyser.maxDecibels;
+
       source.connect(this.analyser);
 
       // Initialize Pitchy detector optimized for bass frequencies
