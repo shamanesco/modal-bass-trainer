@@ -80,9 +80,9 @@ export const CONFIG = {
      * - Extended range/high playing: 350-400 Hz
      * - Conservative (reduce octave jumps): 220 Hz
      *
-     * CURRENT: 260 Hz
+     * CURRENT: 280 Hz (Option 1: Balanced - better high-frequency tracking)
      */
-    maxFrequency: 260,
+    maxFrequency: 280,
 
     /**
      * @property {number} threshold - Minimum signal level (dB) to trigger detection
@@ -125,9 +125,9 @@ export const CONFIG = {
      * - Clean picked tone: 0.80
      * - Maximum accuracy (may miss notes): 0.85-0.90
      *
-     * CURRENT: 0.75
+     * CURRENT: 0.78 (Option 1: Balanced - reduces octave jumps)
      */
-    confidenceThreshold: 0.75,
+    confidenceThreshold: 0.78,
 
     /**
      * @property {number} detectionCooldown - Minimum time between detections (ms)
@@ -147,9 +147,9 @@ export const CONFIG = {
      * - Fast passages/responsive feel: 25-30 ms
      * - CPU-constrained devices: 75-100 ms
      *
-     * CURRENT: 50 ms
+     * CURRENT: 40 ms (Option 1: Balanced - more responsive for fast playing)
      */
-    detectionCooldown: 50,
+    detectionCooldown: 40,
 
     /**
      * Web Audio API AnalyserNode settings
@@ -229,11 +229,12 @@ export const CONFIG = {
      * PERFORMANCE HISTORY:
      * - Started at 600 ms with custom autocorrelation (86% accuracy)
      * - Reduced to 400 ms with Pitchy (87.5% accuracy)
-     * - Currently 300 ms with Pitchy (100% accuracy on 8-note test)
+     * - Reduced to 300 ms with Pitchy (100% accuracy on 4th string, 77% on 2nd string fast)
+     * - Option 1 (Balanced): 280 ms for faster note sequences (3.57 notes/sec)
      *
-     * CURRENT: 300 ms
+     * CURRENT: 280 ms (Option 1: Balanced - allows faster chromatic passages)
      */
-    timeGateMs: 300,
+    timeGateMs: 280,
 
     /**
      * @property {boolean} enablePitchClassMatching - Use pitch class for duplicate detection
