@@ -5,6 +5,7 @@ import { getNoteCountingConfig } from './config.js';
 import { ModalAudioEngine } from './audio.js';
 import { FretboardVisualizer } from './fretboard.js';
 import { BassPitchDetector } from './pitch-detector.js';
+import { VERSION_INFO } from './version.js';
 
 class ModalBassTrainer {
   constructor() {
@@ -20,6 +21,7 @@ class ModalBassTrainer {
     this.practiceType = 'drone'; // 'drone' or 'groove'
     this.currentGroove = null;
     this.tempo = 90;
+    this.volume = 0.5; // 0.0 to 1.0 (50% default)
     this.isPlaying = false;
     
     // Analytics
@@ -52,6 +54,8 @@ class ModalBassTrainer {
       grooveSelect: document.getElementById('groove-select'),
       tempoSlider: document.getElementById('tempo-slider'),
       tempoDisplay: document.getElementById('tempo-display'),
+      volumeSlider: document.getElementById('volume-slider'),
+      volumeDisplay: document.getElementById('volume-display'),
       startButton: document.getElementById('start-button'),
       stopButton: document.getElementById('stop-button'),
       inputDeviceSelect: document.getElementById('input-device-select'),
@@ -111,6 +115,9 @@ class ModalBassTrainer {
       // Show ready state
       this.showStatus('Ready. Select your line input device and click Start.');
 
+      // Display version information
+      this.showVersionInfo();
+
     } catch (error) {
       console.error('Initialization error:', error);
       this.showError('Failed to initialize. Please check your audio input permissions.');
@@ -155,10 +162,10 @@ class ModalBassTrainer {
   setupUIListeners() {
     // Mode selection
     this.ui.modeSelect.addEventListener('change', () => this.updateMode());
-    
+
     // Root selection
     this.ui.rootSelect.addEventListener('change', () => this.updateMode());
-    
+
     // Practice type (drone vs groove)
     this.ui.practiceTypeRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
@@ -166,29 +173,55 @@ class ModalBassTrainer {
         this.updateGrooveOptions();
       });
     });
-    
+
     // Groove selection
     this.ui.grooveSelect.addEventListener('change', (e) => {
       this.currentGroove = e.target.value;
     });
-    
+
     // Tempo slider
     this.ui.tempoSlider.addEventListener('input', (e) => {
       this.tempo = parseInt(e.target.value);
       this.ui.tempoDisplay.textContent = this.tempo;
-      
+
       // Update tempo if already playing
       if (this.isPlaying && this.practiceType === 'groove') {
         this.audioEngine.setTempo(this.tempo);
       }
     });
-    
+
+    // Volume slider
+    this.ui.volumeSlider.addEventListener('input', (e) => {
+      const volumePercent = parseInt(e.target.value);
+      this.volume = volumePercent / 100; // Convert to 0.0-1.0
+      this.ui.volumeDisplay.textContent = volumePercent;
+
+      // Update volume in real-time
+      this.audioEngine.setVolume(this.volume);
+    });
+
     // Start button
     this.ui.startButton.addEventListener('click', () => this.start());
-    
+
     // Stop button
     this.ui.stopButton.addEventListener('click', () => this.stop());
-    
+
+    // Keyboard shortcut: spacebar to start/stop
+    window.addEventListener('keydown', (e) => {
+      // Only respond to spacebar
+      if (e.code === 'Space' || e.key === ' ') {
+        // Prevent default spacebar behavior (page scroll)
+        e.preventDefault();
+
+        // Toggle start/stop based on current state
+        if (this.isPlaying) {
+          this.stop();
+        } else {
+          this.start();
+        }
+      }
+    });
+
     // Input device change
     this.ui.inputDeviceSelect.addEventListener('change', async () => {
       // Cleanup existing stream if any
@@ -285,7 +318,10 @@ class ModalBassTrainer {
         const grooveData = getGroove(this.currentMode, this.currentGroove);
         this.audioEngine.startGroove(this.currentRootMIDI, grooveData, this.tempo);
       }
-      
+
+      // Set initial volume
+      this.audioEngine.setVolume(this.volume);
+
       // Update state
       this.isPlaying = true;
       this.session.startTime = Date.now();
@@ -598,6 +634,21 @@ class ModalBassTrainer {
     if (statusEl) {
       statusEl.textContent = message;
       statusEl.className = 'status-message error';
+    }
+  }
+
+  showVersionInfo() {
+    const versionEl = document.getElementById('version-info');
+    if (versionEl) {
+      versionEl.innerHTML = `
+        <span>v${VERSION_INFO.version}</span>
+        <span>•</span>
+        <span class="branch">${VERSION_INFO.branch}</span>
+        <span>•</span>
+        <span class="commit">${VERSION_INFO.commit}</span>
+        <span>•</span>
+        <span>${VERSION_INFO.buildDate}</span>
+      `;
     }
   }
 

@@ -402,6 +402,33 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* ===== DEBUG FOOTER ===== */
+
+.debug-footer {
+  margin-top: 30px;
+  padding: 15px 20px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-info {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-family: 'Courier New', monospace;
+}
+
+.version-info span {
+  margin: 0 10px;
+}
+
+.version-info .branch {
+  color: #22c55e;
+}
+
+.version-info .commit {
+  color: #3b82f6;
+}
+
 /* ===== SCROLLBAR STYLING ===== */
 
 ::-webkit-scrollbar {
